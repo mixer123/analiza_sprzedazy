@@ -1,7 +1,6 @@
 import pandas as pd
-import numpy as np
 import hashlib
-import re
+
 # Suma kontrolna (hash) danych w pliku Parquet, z uwzględnieniem sortowania po kolumnach TowId i Data.
 def hash_danych_bezpieczny(sciezka_parquet, kolumny_sortowania=['TowId', 'Data']):
     df = pd.read_parquet(sciezka_parquet)
