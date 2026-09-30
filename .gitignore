@@ -1,1 +1,12 @@
-dane/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# System
+.DS_Store
+.vscode/
+
+# Tymczasowe/brudnopisy
+zapas/
