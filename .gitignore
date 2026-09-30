@@ -1,3 +1,7 @@
 zapas/
 stan_magazynowe_claude
 etl_select_asid_draft.ipynb
+stan_magazynowy_zad_4.ipynb
+burdnopis.ipynb
+dane/interim/dane/notebooklm_csv_chunks/*
+dane/interim/fact_inka_soft_flagged_rotacja_wazone.csv
