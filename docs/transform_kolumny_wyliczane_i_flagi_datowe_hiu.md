@@ -1,6 +1,6 @@
-# transform.ipynb — kolumny wyliczane i flagi kalendarzowe
+# transform.ipynb — kolumny wyliczane i flagi datowe
 
-Druga część `transform.ipynb`, po flagach towarowych (`docs/transform_flagi_towarowe_butek.md`). Dokłada ruchy magazynowe, oczyszczone nazwy, kolumny datowe i flagi kalendarzowe, usuwa kolumny pomocnicze, zmienia `TowId` na `SKU` i sprawdza dane przed zapisem `fact_inka_final.parquet`.
+Druga część `transform.ipynb`, po flagach towarowych (`docs/transform_flagi_towarowe_butek.md`). Dokłada ruchy magazynowe, oczyszczone nazwy, kolumny i flagi datowe, usuwa kolumny pomocnicze, zmienia `TowId` na `SKU` i sprawdza dane przed zapisem `fact_inka_final.parquet`.
 
 Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustalenia i decyzje, które się tam nie mieszczą.
 
