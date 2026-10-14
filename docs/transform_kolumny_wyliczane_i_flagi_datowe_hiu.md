@@ -17,7 +17,7 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `KategoriaDnia` | category | `dlugi_weekend` / `niedziela_handlowa` / `niedziela` / `sobota` / `roboczy` |
 | `CzySwieto` | int8 (0/1) | święto ustawowe lub niedziela niehandlowa (z kalendarza) |
 | `CzyZamkniety` | int8 (0/1) | dzień bez żadnego paragonu (z danych) |
-| `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w oknie świątecznym, `1–7` dni przed / po, `999` dalej |
+| `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w oknie świątecznym, `1–7` dni przed / po, `8` dalej niż 7 dni |
 
 **Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`).
 **Zmiana nazwy:** `TowId` → `SKU`, tuż przed zapisem. Hash wyjścia sortuje po `['SKU', 'Data', 'DokId', 'Kolejnosc']`, a kolejny krok (`stany`) powinien liczyć hash wejściowy z tymi samymi kolumnami.
@@ -56,7 +56,7 @@ Przykłady:
 - Okna = długie weekendy + ciągi czerwonych dni (`CzySwieto = 1`) zawierające święto ustawowe. Zwykła niedziela sama nie tworzy okna.
 - Liczba zamiast 0/1, bo 0/1 łatwo wyliczyć później (np. `DniDoSwieta <= 2`), a odwrotnie się nie da.
 - Dwie kolumny, bo dzień może być „po” jednym oknie i „przed” kolejnym.
-- `999` zamiast `NaN` — celowo, żeby kolumna nie miała braków.
+- `8` zamiast `NaN` — celowo, żeby kolumna nie miała braków. Wcześniej było `999`, ale modele liniowe traktują liczbę jako odległość, więc 999 zaburzało wyniki; 8 jest tuż za zakresem 1–7, a modelom drzewiastym to obojętne.
 
 ## Słowniki statyczne
 
