@@ -14,8 +14,8 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `Miesiac`, `TydzienRokuISO`, `DzienTygodnia`, `DzienMiesiaca` | int8 | `DzienTygodnia`: 1 = pn … 7 = nd |
 | `RokMiesiac` | tekst | `'YYYY-MM'` (tekst zamiast `Period`, wygodniejszy np. w Power BI) |
 | `NazwaDnia` | category (uporządkowana) | Poniedziałek … Niedziela, ze słownika (niezależnie od locale systemu) |
-| `KategoriaDnia` | category | `dlugi_weekend` / `niedziela_handlowa` / `niedziela` / `sobota` / `roboczy` |
-| `CzySwieto` | int8 (0/1) | święto ustawowe lub niedziela niehandlowa (z kalendarza) |
+| `KategoriaDnia` | category | `dlugi_weekend` / `swieto` / `niedziela_handlowa` / `niedziela` / `sobota` / `roboczy` |
+| `CzyCzerwonyDzien` | int8 (0/1) | święto ustawowe lub niedziela niehandlowa (z kalendarza); dawniej `CzySwieto` |
 | `CzyZamkniety` | int8 (0/1) | dzień bez żadnego paragonu (z danych) |
 | `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w oknie świątecznym, `1–7` dni przed / po, `8` dalej niż 7 dni |
 
@@ -33,27 +33,29 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 
 Priorytet, pierwsza pasująca wartość:
 1. `dlugi_weekend` — cały ciąg dni z okna ze słownika `dlugie_weekendy` (łącznie ze świętami w oknie),
-2. `niedziela_handlowa` — data w `niedziele_handlowe` (wg ustawy),
-3. `niedziela` — `DzienTygodnia == 7`,
-4. `sobota` — `DzienTygodnia == 6`,
-5. `roboczy` — pozostałe pn–pt.
+2. `swieto` — święto ustawowe poza długim weekendem (np. środa 1.11.2023); wcześniej trafiało do `roboczy` / `sobota` / `niedziela`,
+3. `niedziela_handlowa` — data w `niedziele_handlowe` (wg ustawy),
+4. `niedziela` — `DzienTygodnia == 7`,
+5. `sobota` — `DzienTygodnia == 6`,
+6. `roboczy` — pozostałe pn–pt.
 
-Algorytm: kalendarz dzienny `df_kalendarz` z `pd.date_range(min, max)` (działa też dla przyszłych dat) → `np.select` w kolejności priorytetu → `pd.Categorical` ze stałą listą 5 kategorii → `merge` do danych po `Data`. Kontrole: daty w `niedziele_handlowe` wypadają w niedzielę, brak `NaN` po `merge`.
+Algorytm: kalendarz dzienny `df_kalendarz` z `pd.date_range(min, max)` (działa też dla przyszłych dat) → `np.select` w kolejności priorytetu → `pd.Categorical` ze stałą listą 6 kategorii → `merge` do danych po `Data`. Kontrole: daty w `niedziele_handlowe` wypadają w niedzielę, brak `NaN` po `merge`.
 
-## CzySwieto i CzyZamkniety
+## CzyCzerwonyDzien i CzyZamkniety
 
 Kalendarz (ustawa) i dane (sklep) to osobne flagi:
-- `CzySwieto` — z kalendarza, więc wyliczalna też dla przyszłych dat.
+- `CzyCzerwonyDzien` — z kalendarza, więc wyliczalna też dla przyszłych dat.
 - `CzyZamkniety` — z danych: brak paragonów (`TypDok = 21`, `DokId != -1`) danego dnia. Zamknięty to nie to samo co brak ruchów: w dni zamknięte bywają PZ, ZAM, PRZEC, REM.
+- Komórka `CzyZamkniety` wypisuje dni, w których `CzyZamkniety` różni się od `CzyCzerwonyDzien`, czyli sklep zachował się inaczej, niż wynika z kalendarza (np. otwarty w niedzielę niehandlową albo zamknięty w niedzielę handlową).
 
 Przykłady:
 - 2023-04-30, 2023-08-27 → `niedziela_handlowa` + `CzyZamkniety = 1`,
-- 1.05 → `dlugi_weekend` + `CzySwieto = 1`; 2.05 → `dlugi_weekend` + `CzySwieto = 0`,
-- 1.11.2023 (śr) → `roboczy` + `CzySwieto = 1`; sob. 11.11.2023 → `sobota` + `CzySwieto = 1`.
+- 1.05 → `dlugi_weekend` + `CzyCzerwonyDzien = 1`; 2.05 → `dlugi_weekend` + `CzyCzerwonyDzien = 0`,
+- 1.11.2023 (śr) → `swieto` + `CzyCzerwonyDzien = 1`; sob. 11.11.2023 → `dlugi_weekend` + `CzyCzerwonyDzien = 1` (okno 11–12.11).
 
 ## DniDoSwieta / DniPoSwiecie
 
-- Okna = długie weekendy + ciągi czerwonych dni (`CzySwieto = 1`) zawierające święto ustawowe. Zwykła niedziela sama nie tworzy okna.
+- Okna = długie weekendy + ciągi czerwonych dni (`CzyCzerwonyDzien = 1`) zawierające święto ustawowe. Zwykła niedziela sama nie tworzy okna.
 - Liczba zamiast 0/1, bo 0/1 łatwo wyliczyć później (np. `DniDoSwieta <= 2`), a odwrotnie się nie da.
 - Dwie kolumny, bo dzień może być „po” jednym oknie i „przed” kolejnym.
 - `8` zamiast `NaN` — celowo, żeby kolumna nie miała braków. Wcześniej było `999`, ale modele liniowe traktują liczbę jako odległość, więc 999 zaburzało wyniki; 8 jest tuż za zakresem 1–7, a modelom drzewiastym to obojętne.
@@ -64,7 +66,7 @@ Przykłady:
 - `niedziele_handlowe` — wg ustawy, 2023 – styczeń 2026; 2023-12-10 zamiast 2023-12-24 (Wigilia w niedzielę, termin przeniesiony nowelizacją).
 - `dlugie_weekendy` — 25 okien, 2023 – styczeń 2026, ustalone ręcznie: święta + soboty/niedziele + mostki (pojedynczy dzień roboczy = 1 dzień urlopu); tylko okna ≥ 3 dni i święta w sobotę.
 
-Przy nowych danych wszystkie trzy słowniki trzeba uzupełnić.
+Przy nowych danych wszystkie trzy słowniki trzeba uzupełnić. Pilnuje tego `assert` w komórce długich weekendów: gdy dane sięgają dalej niż słowniki (obecnie 31.01.2026), notebook zatrzymuje się z komunikatem.
 
 ## Usunięte z wcześniejszych wersji
 
