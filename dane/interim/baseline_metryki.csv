@@ -1,0 +1,7 @@
+zakres,metoda,dni,MAE_zl,WAPE_%,MAPE_%,test_od,test_do
+wszystkie dni,Tydzien_temu,66,2391.97,11.94,11.65,2025-11-03,2026-01-31
+wszystkie dni,Srednia_4_tygodni,66,2362.86,11.8,11.72,2025-11-03,2026-01-31
+poza okolicami świąt,Tydzien_temu,46,1276.44,6.6,6.81,2025-11-03,2026-01-31
+poza okolicami świąt,Srednia_4_tygodni,46,1905.09,9.86,10.24,2025-11-03,2026-01-31
+okolice świąt,Tydzien_temu,20,4957.68,22.91,22.8,2025-11-03,2026-01-31
+okolice świąt,Srednia_4_tygodni,20,3415.74,15.79,15.13,2025-11-03,2026-01-31
