@@ -19,7 +19,7 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `CzyNiedzielaHandlowa` | int8 (0/1) | niedziela handlowa wg ustawy |
 | `CzyRoboczy` | int8 (0/1) | kalendarzowo dzień roboczy: pn–pt i nie święto (mostek w długim weekendzie = 1) |
 | `CzyZamkniety` | int8 (0/1) | dzień bez żadnego paragonu (z danych) |
-| `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w oknie świątecznym, `1–7` dni przed / po, `8` dalej niż 7 dni |
+| `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w dzień święta, `1–7` dni przed / po najbliższym święcie, `8` dalej niż 7 dni (dni kalendarzowe) |
 | `OknoSwiateczne` | category | nazwa okna świątecznego (np. `majowka_2023`) ze słownika `okna_swiateczne`: dni okna i do 7 dni przed / po; poza oknami `brak` |
 
 **Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`); po review: `KategoriaDnia` (zastąpiona flagami 0/1) i `CzyCzerwonyDzien` (wyliczalny z flag: `CzySwieto | (DzienTygodnia == 7 & CzyNiedzielaHandlowa == 0)`).
@@ -62,9 +62,12 @@ Przykład: 2023-04-30 i 2023-08-27 to niedziele handlowe (`CzyNiedzielaHandlowa 
 
 ## DniDoSwieta / DniPoSwiecie
 
-- Okna = długie weekendy + ciągi czerwonych dni (święto ustawowe lub niedziela niehandlowa) zawierające święto ustawowe (poza Zielonymi Świątkami). Zwykła niedziela sama nie tworzy okna.
+- Odległość w dniach kalendarzowych od **dnia święta** ustawowego: `DniDoSwieta` do najbliższego następnego, `DniPoSwiecie` od ostatniego. `0` tylko w dzień święta. Zielone Świątki się nie liczą (`swieta_bez_okna`).
+- Wcześniej `0` miały wszystkie dni okna (np. sobota i niedziela przed Nowym Rokiem) — zmienione, bo dzień przed świętem to co innego niż samo święto. Przynależność do długiego weekendu niosą `CzyDlugiWeekend` i `OknoSwiateczne`.
+- Święta kilkudniowe (Wielkanoc, Boże Narodzenie) mają `0` w każdym dniu święta; mostek między świętami (np. 2.05) ma `1` i `1`.
+- Przykład (Nowy Rok 2024): 30.12 → 2 / 4 (do 1.01 / od 26.12), 31.12 → 1 / 5, 1.01 → 0 / 0, 2.01 → 4 / 1.
 - Liczba zamiast 0/1, bo 0/1 łatwo wyliczyć później (np. `DniDoSwieta <= 2`), a odwrotnie się nie da.
-- Dwie kolumny, bo dzień może być „po” jednym oknie i „przed” kolejnym.
+- Dwie kolumny, bo dzień może być „po” jednym święcie i „przed” kolejnym.
 - `8` zamiast `NaN` — celowo, żeby kolumna nie miała braków. Wcześniej było `999`, ale modele liniowe traktują liczbę jako odległość, więc 999 zaburzało wyniki; 8 jest tuż za zakresem 1–7, a modelom drzewiastym to obojętne.
 
 ## OknoSwiateczne
@@ -104,10 +107,11 @@ Kalendarz opiera się na ręcznych słownikach i wielu decyzjach, a błąd w dac
 - Okna 1–2-dniowe (np. 1.11.2023, środa) — w słowniku okien dla `DniDoSwieta` / `DniPoSwiecie`, ale nie w `dlugie_weekendy`?
 - Wielka Sobota, 23.12 — w oknie czy poza nim (to mocne dni zakupowe)?
 - Boże Narodzenie + Nowy Rok (+ Trzech Króli) — jedno okno czy osobne? (rozstrzygnie EDA; prawdopodobnie jedno okno świąteczno-noworoczne)
-- `DniDoSwieta` / `DniPoSwiecie`: zasięg (1–3 dni czy więcej?), dni kalendarzowe czy tylko otwarte.
+- `DniDoSwieta` / `DniPoSwiecie`: zasięg (1–3 dni czy więcej?) — do wyboru w EDA (dni otwarcia: patrz Propozycje po MVP).
 
 ## Propozycje po MVP
 
+- `DniDoSwieta` / `DniPoSwiecie`: rozważyć liczenie w dniach otwarcia sklepu zamiast kalendarzowych (dni zamknięte — niedziele niehandlowe, święta — nie wnoszą sprzedaży, więc „2 dni przed świętem” może znaczyć różną liczbę dni zakupowych).
 - Flaga stanu magazynu (brak towaru ≠ brak popytu), dni skróconego otwarcia, kanibalizacja.
 - `CenaRealna` — faktyczna cena z kasy dla sprzedaży (`TypDok = 21`). Pominięta w MVP. `Zaplacono` jest per paragon, więc wymaga rozdzielenia na pozycje; ceny ujemne do zbadania; dla pozostałych ruchów `CenaPoRab`.
 - `CenaPoRab` i `CenaRealna` są **netto**; cena brutto = netto × (1 + VAT).
