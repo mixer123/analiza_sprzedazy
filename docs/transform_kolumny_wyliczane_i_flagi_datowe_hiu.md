@@ -12,14 +12,17 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `NazwaTowCzysta`, `NazwaAsortCzysta` | tekst | nazwy małymi literami, bez polskich znaków i symboli |
 | `Rok`, `RokISO` | int16 | rok kalendarzowy i rok tygodnia ISO |
 | `Miesiac`, `TydzienRokuISO`, `DzienTygodnia`, `DzienMiesiaca` | int8 | `DzienTygodnia`: 1 = pn … 7 = nd |
-| `RokMiesiac` | tekst | `'YYYY-MM'` (tekst zamiast `Period`, wygodniejszy np. w Power BI) |
+| `RokMiesiac` | category (uporządkowana) | `'YYYY-MM'`, kategorie w kolejności chronologicznej (ok. 10 MB zamiast ~144 MB jako tekst) |
 | `NazwaDnia` | category (uporządkowana) | Poniedziałek … Niedziela, ze słownika (niezależnie od locale systemu) |
-| `KategoriaDnia` | category | `dlugi_weekend` / `swieto` / `niedziela_handlowa` / `niedziela` / `sobota` / `roboczy` |
-| `CzyCzerwonyDzien` | int8 (0/1) | święto ustawowe lub niedziela niehandlowa (z kalendarza); dawniej `CzySwieto` |
+| `CzySwieto` | int8 (0/1) | **tylko** święto ustawowe, także w długim weekendzie (uwaga: wcześniej pod tą nazwą było „święto lub niedziela niehandlowa”) |
+| `CzyDlugiWeekend` | int8 (0/1) | dzień w oknie długiego weekendu (`dlugie_weekendy`) |
+| `CzyNiedzielaHandlowa` | int8 (0/1) | niedziela handlowa wg ustawy |
+| `CzyRoboczy` | int8 (0/1) | kalendarzowo dzień roboczy: pn–pt i nie święto (mostek w długim weekendzie = 1) |
 | `CzyZamkniety` | int8 (0/1) | dzień bez żadnego paragonu (z danych) |
 | `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w oknie świątecznym, `1–7` dni przed / po, `8` dalej niż 7 dni |
+| `OknoSwiateczne` | category | nazwa okna świątecznego (np. `majowka_2023`) ze słownika `okna_swiateczne`: dni okna i do 7 dni przed / po; poza oknami `brak` |
 
-**Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`).
+**Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`); po review: `KategoriaDnia` (zastąpiona flagami 0/1) i `CzyCzerwonyDzien` (wyliczalny z flag: `CzySwieto | (DzienTygodnia == 7 & CzyNiedzielaHandlowa == 0)`).
 **Zmiana nazwy:** `TowId` → `SKU`, tuż przed zapisem. Hash wyjścia sortuje po `['SKU', 'Data', 'DokId', 'Kolejnosc']`, a kolejny krok (`stany`) powinien liczyć hash wejściowy z tymi samymi kolumnami.
 
 ## Zasady ogólne
@@ -29,49 +32,69 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 - `fact_inka_final` to CSOT na poziomie transakcji (ziarno dzienne do rozważenia później).
 - Kodowanie kategorii (one-hot itp.) dopiero na etapie ML, nie w ETL.
 
-## KategoriaDnia
+## Flagi kalendarzowe 0/1
 
-Priorytet, pierwsza pasująca wartość:
-1. `dlugi_weekend` — cały ciąg dni z okna ze słownika `dlugie_weekendy` (łącznie ze świętami w oknie),
-2. `swieto` — święto ustawowe poza długim weekendem (np. środa 1.11.2023); wcześniej trafiało do `roboczy` / `sobota` / `niedziela`,
-3. `niedziela_handlowa` — data w `niedziele_handlowe` (wg ustawy),
-4. `niedziela` — `DzienTygodnia == 7`,
-5. `sobota` — `DzienTygodnia == 6`,
-6. `roboczy` — pozostałe pn–pt.
+Wcześniej `KategoriaDnia` (jedna kolumna, jedna wartość wg priorytetu) gubiła część informacji — wskazał to Butek w review:
+- święta w długim weekendzie były widoczne tylko jako `dlugi_weekend` (kategoria `swieto` miała 6 dni, a świąt jest 42),
+- niedziela handlowa 30.04.2023 zniknęła w majówce (22 dni zamiast 23),
+- mostek (dzień roboczy w długim weekendzie) tracił informację, że był roboczy.
 
-Algorytm: kalendarz dzienny `df_kalendarz` z `pd.date_range(min, max)` (działa też dla przyszłych dat) → `np.select` w kolejności priorytetu → `pd.Categorical` ze stałą listą 6 kategorii → `merge` do danych po `Data`. Kontrole: daty w `niedziele_handlowe` wypadają w niedzielę, brak `NaN` po `merge`.
+Teraz cztery niezależne flagi, które mogą się nakładać: `CzySwieto`, `CzyDlugiWeekend`, `CzyNiedzielaHandlowa`, `CzyRoboczy`. Zwykłą sobotę i niedzielę rozróżnia `DzienTygodnia`.
 
-## CzyCzerwonyDzien i CzyZamkniety
+Przykłady (majówka 2023, okno 29.04–03.05):
+- 29.04 (sob) → `CzyDlugiWeekend = 1`, pozostałe 0,
+- 30.04 (nd) → `CzyDlugiWeekend = 1`, `CzyNiedzielaHandlowa = 1`,
+- 1.05 i 3.05 → `CzyDlugiWeekend = 1`, `CzySwieto = 1`,
+- 2.05 (wt, mostek) → `CzyDlugiWeekend = 1`, `CzyRoboczy = 1`.
 
-Kalendarz (ustawa) i dane (sklep) to osobne flagi:
-- `CzyCzerwonyDzien` — z kalendarza, więc wyliczalna też dla przyszłych dat.
+**Uwaga przy EDA:** przy łączeniu flag w warunki (`groupby`, filtry) wynik trzeba za każdym razem sprawdzić (asserty, liczności), żeby kolejne analizy nie definiowały typów dni na różne sposoby.
+
+Kontrole w notebooku: niedziela handlowa zawsze wypada w niedzielę, święto nigdy nie ma `CzyRoboczy = 1`, brak `NaN` po `merge`.
+
+## CzyZamkniety
+
+Kalendarz (ustawa) i dane (sklep) to osobne informacje:
+- „czerwony dzień” (święto ustawowe lub niedziela niehandlowa) — z kalendarza, wyliczalny z flag także dla przyszłych dat; w notebooku tylko pomocniczo (`czerwony_dzien`), bez kolumny w tabeli,
 - `CzyZamkniety` — z danych: brak paragonów (`TypDok = 21`, `DokId != -1`) danego dnia. Zamknięty to nie to samo co brak ruchów: w dni zamknięte bywają PZ, ZAM, PRZEC, REM.
-- Komórka `CzyZamkniety` wypisuje dni, w których `CzyZamkniety` różni się od `CzyCzerwonyDzien`, czyli sklep zachował się inaczej, niż wynika z kalendarza (np. otwarty w niedzielę niehandlową albo zamknięty w niedzielę handlową).
+- Komórka `CzyZamkniety` wypisuje dni, w których `CzyZamkniety` różni się od „czerwonego dnia”, czyli sklep zachował się inaczej, niż wynika z kalendarza (np. otwarty w niedzielę niehandlową albo zamknięty w niedzielę handlową).
 
-Przykłady:
-- 2023-04-30, 2023-08-27 → `niedziela_handlowa` + `CzyZamkniety = 1`,
-- 1.05 → `dlugi_weekend` + `CzyCzerwonyDzien = 1`; 2.05 → `dlugi_weekend` + `CzyCzerwonyDzien = 0`,
-- 1.11.2023 (śr) → `swieto` + `CzyCzerwonyDzien = 1`; sob. 11.11.2023 → `dlugi_weekend` + `CzyCzerwonyDzien = 1` (okno 11–12.11).
+Przykład: 2023-04-30 i 2023-08-27 to niedziele handlowe (`CzyNiedzielaHandlowa = 1`), w które sklep był zamknięty (`CzyZamkniety = 1`) — to jedyne 2 rozbieżności w danych.
 
 ## DniDoSwieta / DniPoSwiecie
 
-- Okna = długie weekendy + ciągi czerwonych dni (`CzyCzerwonyDzien = 1`) zawierające święto ustawowe. Zwykła niedziela sama nie tworzy okna.
+- Okna = długie weekendy + ciągi czerwonych dni (święto ustawowe lub niedziela niehandlowa) zawierające święto ustawowe (poza Zielonymi Świątkami). Zwykła niedziela sama nie tworzy okna.
 - Liczba zamiast 0/1, bo 0/1 łatwo wyliczyć później (np. `DniDoSwieta <= 2`), a odwrotnie się nie da.
 - Dwie kolumny, bo dzień może być „po” jednym oknie i „przed” kolejnym.
 - `8` zamiast `NaN` — celowo, żeby kolumna nie miała braków. Wcześniej było `999`, ale modele liniowe traktują liczbę jako odległość, więc 999 zaburzało wyniki; 8 jest tuż za zakresem 1–7, a modelom drzewiastym to obojętne.
 
+## OknoSwiateczne
+
+- Nazwa okna (`category`) wprost ze słownika `okna_swiateczne`: dni okna + do 7 dni przed i po; poza oknami `brak`.
+- 27 okien: 22 długie weekendy + 5 pojedynczych świąt (Nowy Rok 2023 — nd, Wszystkich Świętych 2023 — śr, Niepodległości 2023 — sob, Trzech Króli 2024 — sob, Wszystkich Świętych 2025 — sob). Zielone Świątki nie mają okna (`swieta_bez_okna`).
+- Zakresy wygenerowano raz regułą „najbliższe okno, remis → następne” i wpisano do słownika jako statyczne. Dni newralgiczne zmienia się w słowniku jedną datą, bez zmiany logiki. Remisy (dzień dokładnie w połowie między oknami) przypisane do następnego okna: 06.11.2023, 28.12.2023, 06.11.2024, 26.04.2025, 05.11.2025, 30.12.2025 — do przejrzenia.
+- Wartości w snake_case z rokiem — filtrowanie po rodzaju (`str.startswith('majowka')`) i po roku (`str.endswith('_2024')`).
+- Celowo jedna kolumna, bez osobnych nazw „poprzedniego” i „następnego” okna — więcej wzorców rozdrobniłoby grupy w EDA i dało szum modelom. Odległość do obu okien niosą `DniDoSwieta` / `DniPoSwiecie`.
+
 ## Słowniki statyczne
 
-- `swieta_pl` — święta ustawowe 2023–2026 (zgodne z biblioteką `holidays` i danymi; od 2025 Wigilia jest dniem wolnym).
+Cztery słowniki w kolejnych komórkach notebooka:
+- `swieta_pl` — święta ustawowe 2023–2026, z nazwą w komentarzu przy każdej dacie; zgodne w 100% z biblioteką `holidays` (od 2025 Wigilia jest dniem wolnym). Do tego `swieta_bez_okna` — Zielone Świątki: zawsze w niedzielę, bez dnia wolnego w zamian i bez efektu zakupowego, więc mają `CzySwieto = 1`, ale nie tworzą okna świątecznego.
 - `niedziele_handlowe` — wg ustawy, 2023 – styczeń 2026; 2023-12-10 zamiast 2023-12-24 (Wigilia w niedzielę, termin przeniesiony nowelizacją).
-- `dlugie_weekendy` — 25 okien, 2023 – styczeń 2026, ustalone ręcznie: święta + soboty/niedziele + mostki (pojedynczy dzień roboczy = 1 dzień urlopu); tylko okna ≥ 3 dni i święta w sobotę.
+- `dlugie_weekendy` — 22 okna, tylko ciągi **≥ 3 dni** wolnych: święta + soboty/niedziele + mostki (pojedynczy dzień roboczy = 1 dzień urlopu). Święto w sobotę/niedzielę bez sąsiednich świąt daje najwyżej 2 dni, więc nie jest długim weekendem. Dni wolnego oddawanego przez pracodawcę za święto w sobotę nie uwzględniamy — to decyzja firmy, nie kalendarza. `nowy_rok_2025` i `nowy_rok_2026` obejmują 1–6.01 (mostki, razem z Trzema Królami).
+- `okna_swiateczne` — pełne zakresy okien dla `OknoSwiateczne` (patrz wyżej).
 
-Przy nowych danych wszystkie trzy słowniki trzeba uzupełnić. Pilnuje tego `assert` w komórce długich weekendów: gdy dane sięgają dalej niż słowniki (obecnie 31.01.2026), notebook zatrzymuje się z komunikatem.
+Przy nowych danych wszystkie słowniki trzeba uzupełnić — pilnuje tego assert w walidacji (dane muszą mieścić się w 01.01.2023–31.01.2026).
+
+## Walidacja kalendarza
+
+Kalendarz opiera się na ręcznych słownikach i wielu decyzjach, a błąd w dacie nie wywoła wyjątku — po cichu zepsuje flagi. Dlatego wszystkie kontrole są w jednej komórce „Walidacja kalendarza”:
+- **asserty**: zakres danych w zakresie słowników; brak duplikatów; niedziele handlowe tylko w niedziele i nie w święto; długie weekendy ≥ 3 dni, ze świętem, bez nakładania; okna świąteczne bez nakładania, każde z rdzeniem, każdy długi weekend w swoim oknie, każde święto (poza Zielonymi Świątkami) w jakimś oknie; flagi spójne (`CzyRoboczy` tylko pn–pt i nie w święto, `CzySwieto` = `swieta_pl`); `DniDoSwieta = 0` dokładnie w dniach okien; każdy dzień okna i długiego weekendu ma nazwę w `OknoSwiateczne`; brak `NaN` i poprawne typy,
+- **wydruki do przeglądu ręcznego**: tabela okien (zakres, rdzeń, dni przed/po, święta, mostki), okna z zakresem innym niż ±7 dni oraz przełomy roku dzień po dniu (20.12–10.01).
 
 ## Usunięte z wcześniejszych wersji
 
-- `DlugiWeekend` i `NiedzielaHandlowa` (0/1) — są w `KategoriaDnia`,
-- `CzyDzienRoboczy` — pokrywa się z `KategoriaDnia`,
+- `KategoriaDnia` — zastąpiona flagami 0/1 (review PR #9),
+- `CzyCzerwonyDzien` — wyliczalny z flag (review PR #9),
 - `ProductLifetimeDays` — artefakt,
 - angielskie duplikaty cech kalendarzowych (`day_of_week`, `year`…),
 - agregacje `daily_sales`, `df_tx_sku`, `df_feat_tx`, `eda_weekly` — to etap EDA/ML.
@@ -80,7 +103,7 @@ Przy nowych danych wszystkie trzy słowniki trzeba uzupełnić. Pilnuje tego `as
 
 - Okna 1–2-dniowe (np. 1.11.2023, środa) — w słowniku okien dla `DniDoSwieta` / `DniPoSwiecie`, ale nie w `dlugie_weekendy`?
 - Wielka Sobota, 23.12 — w oknie czy poza nim (to mocne dni zakupowe)?
-- Boże Narodzenie + Nowy Rok (+ Trzech Króli) — jedno okno czy osobne?
+- Boże Narodzenie + Nowy Rok (+ Trzech Króli) — jedno okno czy osobne? (rozstrzygnie EDA; prawdopodobnie jedno okno świąteczno-noworoczne)
 - `DniDoSwieta` / `DniPoSwiecie`: zasięg (1–3 dni czy więcej?), dni kalendarzowe czy tylko otwarte.
 
 ## Propozycje po MVP
