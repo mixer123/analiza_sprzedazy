@@ -12,8 +12,6 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `NazwaTowCzysta`, `NazwaAsortCzysta` | tekst | nazwy małymi literami, bez polskich znaków i symboli |
 | `Rok`, `RokISO` | int16 | rok kalendarzowy i rok tygodnia ISO |
 | `Miesiac`, `TydzienRokuISO`, `DzienTygodnia`, `DzienMiesiaca` | int8 | `DzienTygodnia`: 1 = pn … 7 = nd |
-| `RokMiesiac` | category (uporządkowana) | `'YYYY-MM'`, kategorie w kolejności chronologicznej (ok. 10 MB zamiast ~144 MB jako tekst) |
-| `NazwaDnia` | category (uporządkowana) | Poniedziałek … Niedziela, ze słownika (niezależnie od locale systemu) |
 | `CzySwieto` | int8 (0/1) | **tylko** święto ustawowe, także w długim weekendzie (uwaga: wcześniej pod tą nazwą było „święto lub niedziela niehandlowa”) |
 | `CzyDlugiWeekend` | int8 (0/1) | dzień w oknie długiego weekendu (`dlugie_weekendy`) |
 | `CzyNiedzielaHandlowa` | int8 (0/1) | niedziela handlowa wg ustawy |
@@ -22,7 +20,7 @@ Krótkie opisy są w markdownach nad komórkami notebooka. Ten plik zbiera ustal
 | `DniDoSwieta`, `DniPoSwiecie` | int16 | `0` w dzień święta, `1–7` dni przed / po najbliższym święcie, `8` dalej niż 7 dni (dni kalendarzowe) |
 | `OknoSwiateczne` | category | nazwa okna świątecznego (np. `majowka_2023`) ze słownika `okna_swiateczne`: dni okna i do 7 dni przed / po; poza oknami `brak` |
 
-**Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`); po review: `KategoriaDnia` (zastąpiona flagami 0/1) i `CzyCzerwonyDzien` (wyliczalny z flag: `CzySwieto | (DzienTygodnia == 7 & CzyNiedzielaHandlowa == 0)`).
+**Usunięte:** `IloscBazowa`, `Mnoznik` (zawarte w `RuchMagazynowy`); po review: `KategoriaDnia` (zastąpiona flagami 0/1) i `CzyCzerwonyDzien` (wyliczalny z flag: `CzySwieto | (DzienTygodnia == 7 & CzyNiedzielaHandlowa == 0)`); `NazwaDnia` i `RokMiesiac` (redundancja z `DzienTygodnia` / `Data`) — zastąpione funkcjami `nazwa_dnia(dzien_tygodnia)` i `rok_miesiac(data)` w `utils/tools.py`, do użycia w EDA.
 **Zmiana nazwy:** `TowId` → `SKU`, tuż przed zapisem. Hash wyjścia sortuje po `['SKU', 'Data', 'DokId', 'Kolejnosc']`, a kolejny krok (`stany`) powinien liczyć hash wejściowy z tymi samymi kolumnami.
 
 ## Zasady ogólne
@@ -98,6 +96,7 @@ Kalendarz opiera się na ręcznych słownikach i wielu decyzjach, a błąd w dac
 
 - `KategoriaDnia` — zastąpiona flagami 0/1 (review PR #9),
 - `CzyCzerwonyDzien` — wyliczalny z flag (review PR #9),
+- `NazwaDnia`, `RokMiesiac` — redundantne, zastąpione funkcjami w `utils/tools.py` (review PR #9),
 - `ProductLifetimeDays` — artefakt,
 - angielskie duplikaty cech kalendarzowych (`day_of_week`, `year`…),
 - agregacje `daily_sales`, `df_tx_sku`, `df_feat_tx`, `eda_weekly` — to etap EDA/ML.
