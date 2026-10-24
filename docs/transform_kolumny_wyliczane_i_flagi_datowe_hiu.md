@@ -81,7 +81,7 @@ Przykład: 2023-04-30 i 2023-08-27 to niedziele handlowe (`CzyNiedzielaHandlowa 
 Cztery słowniki w kolejnych komórkach notebooka:
 - `swieta_pl` — święta ustawowe 2023–2026, z nazwą w komentarzu przy każdej dacie; zgodne w 100% z biblioteką `holidays` (od 2025 Wigilia jest dniem wolnym). Do tego `swieta_bez_okna` — Zielone Świątki: zawsze w niedzielę, bez dnia wolnego w zamian i bez efektu zakupowego, więc mają `CzySwieto = 1`, ale nie tworzą okna świątecznego.
 - `niedziele_handlowe` — wg ustawy, 2023 – styczeń 2026; 2023-12-10 zamiast 2023-12-24 (Wigilia w niedzielę, termin przeniesiony nowelizacją).
-- `dlugie_weekendy` — 22 okna, tylko ciągi **≥ 3 dni** wolnych: święta + soboty/niedziele + mostki (pojedynczy dzień roboczy = 1 dzień urlopu). Święto w sobotę/niedzielę bez sąsiednich świąt daje najwyżej 2 dni, więc nie jest długim weekendem. Dni wolnego oddawanego przez pracodawcę za święto w sobotę nie uwzględniamy — to decyzja firmy, nie kalendarza. `nowy_rok_2025` i `nowy_rok_2026` obejmują 1–6.01 (mostki, razem z Trzema Królami).
+- `dlugie_weekendy` — 22 okna, tylko ciągi **≥ 3 dni** wolnych: święta + soboty/niedziele + mostki (dzień lub dni robocze między świętem a weekendem, np. 2–3.01.2025). Święto w sobotę/niedzielę bez sąsiednich świąt daje najwyżej 2 dni, więc nie jest długim weekendem. Dni wolnego oddawanego przez pracodawcę za święto w sobotę nie uwzględniamy — to decyzja firmy, nie kalendarza. `nowy_rok_2025` i `nowy_rok_2026` obejmują 1–6.01 (mostki, razem z Trzema Królami).
 - `okna_swiateczne` — pełne zakresy okien dla `OknoSwiateczne` (patrz wyżej).
 
 Przy nowych danych wszystkie słowniki trzeba uzupełnić — pilnuje tego assert w walidacji (dane muszą mieścić się w 01.01.2023–31.01.2026).
