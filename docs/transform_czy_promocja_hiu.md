@@ -1,6 +1,6 @@
 # transform.ipynb — CzyPromocja
 
-Sekcja `transform.ipynb` wykrywająca promocje z cen na pozycjach sprzedaży (`TypDok == 21`, `DokId != -1`). Notebook roboczy z porównaniem algorytmów i walidacją na gazetkach: `notebooks/etl/beta/Flaga_CzyPromocja_roboczy.ipynb`.
+Sekcja `transform.ipynb` wykrywająca promocje z cen na pozycjach sprzedaży (`TypDok == 21`, `DokId != -1`).
 
 ## Kolumny wynikowe
 
@@ -45,18 +45,26 @@ Przykład (masło Mlekovita 6255): 6,49 → 5,79 (22.03–08.04.2023) → 6,49: 
 
 ## Walidacja na gazetkach
 
-6 gazetek (03.2023 – 01.2026), 344 pozycje z przypisanym SKU (`notebooks/etl/beta/gazetki_promocje.parquet`). Porównanie z algorytmem Butka (mediana `CenaPoRab` z 60 dni wstecz), te same miary:
+**Dane:** 6 gazetek SPAR (03.2023 – 01.2026), przepisane ręcznie do `gazetki_promocje.parquet`.
 
-| Miara | Nasz | Butek |
-|---|---|---|
-| dni złapane (↑) | 83,9% | 72,9% |
-| pozycje wykryte (↑) | 81,4% | 77,0% |
-| flagi spoza gazetki (↓, 3 pełne gazetki — górna granica błędu) | 60,9% | 68,0% |
-| flaga na dniach sprzedaży | 4,8% | 5,8% |
+**Pozycja** = jeden towar (SKU) w jednej gazetce, z okresem `DataOd`–`DataDo` — np. masło 6255 w gazetce 15–21.03.2023. Pozycji z przypisanym SKU: 344.
 
-Przy podziale wg `PromocjaWSklepie` (czy cena w sklepie faktycznie spadła): wykryte 93,0% / 87,2%, z flagą bez promocji 6,5% / 10,9%.
+**`PromocjaWSklepie`** = czy cena w sklepie faktycznie spadła w okresie gazetki (sklep franczyzowy nie zawsze bierze udział w promocji):
+- 1 → 298 pozycji
+- 0 → 46 pozycji
 
-Definicje miar i przykłady — w notebooku roboczym.
+Porównanie z algorytmem Butka (mediana `CenaPoRab` z 60 dni wstecz):
+
+| Pytanie | Jak liczone | Nasz | Butek |
+|---|---|---|---|
+| Czy flaga znajduje promocje z gazetek? (↑) | pozycje z `PromocjaWSklepie = 1` z flagą choć w 1 dniu okresu ÷ 298 | 93,0% | 87,2% |
+| Czy flaga pojawia się, gdy w sklepie promocji nie było? (↓) | pozycje z `PromocjaWSklepie = 0` z flagą choć w 1 dniu okresu ÷ 46 | 6,5% | 10,9% |
+| Czy flaga obejmuje całą promocję, a nie tylko część dni? (↑) | dni sprzedaży z flagą ÷ wszystkie dni sprzedaży w okresach 344 pozycji | 83,9% | 72,9% |
+| Ile flag dotyczy towarów spoza gazetki? (↓) | dni sprzedaży z flagą na SKU spoza gazetki ÷ wszystkie dni z flagą, w okresie 3 gazetek przepisanych w całości | 60,9% | 68,0% |
+
+Ostatni wiersz to **górna granica błędu** — sklep ma też własne promocje spoza gazetek (krótka data, akcje producentów), więc część tych flag to prawdziwe promocje.
+
+Flaga obejmuje 4,8% dni sprzedaży (Butek: 5,8%).
 
 ## Ograniczenia
 
@@ -66,6 +74,6 @@ Definicje miar i przykłady — w notebooku roboczym.
 
 ## Po MVP
 
-- Warstwa z gazetek: `CzyPromocja` = algorytm **lub** potwierdzenie z gazetki + kolumna `ZrodloPromocji`; gazetki dokładane stopniowo (lista spodziewanych dat: `notebooks/etl/beta/gazetki_spodziewane.csv`, ok. 26 gazetek głównych rocznie, start w środy co 2 tygodnie).
+- Warstwa z gazetek: `CzyPromocja` = algorytm **lub** potwierdzenie z gazetki + kolumna `ZrodloPromocji`; gazetki dokładane stopniowo (ok. 26 gazetek głównych rocznie, start w środy co 2 tygodnie).
 - Wielopaki: cena regularna z ceny pojedynczej sztuki × N.
 - Cena odniesienia „tylko wstecz” (pomysł Butka) — jeśli flaga ma być liczona na bieżąco.
