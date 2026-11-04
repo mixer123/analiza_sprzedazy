@@ -1,7 +1,14 @@
 # Analiza Sprzedaży SPAR — Projekt INKA
 
-<details open>
-<summary><h2>ETL — struktura projektu i pipeline</h2></summary>
+Projekt edukacyjny: analiza sprzedaży sklepu SPAR (franczyza) na danych z PC-Market (2023–2026).  
+Cel: optymalizacja zamówień — prognoza sprzedaży i rekomendacja ilości do zamówienia.  
+
+**Autorzy:**
+- Mirosław Butajło ([@mixer123](https://github.com/mixer123))  
+- Hubert Drozda ([@Hiu1975](https://github.com/Hiu1975))
+
+<details>
+<summary><h2>Projekt — struktura, konwencje, środowisko</h2></summary>
 
 ### Struktura Projektu
 
@@ -25,6 +32,60 @@ analiza_sprzedazy_w_sklepie/
 ├── 📄 .gitignore
 └── 📄 .gitattributes   ← obsługa plików .parquet przez Git LFS
 ```
+
+### Konwencje Nazw
+
+#### Kod
+- Kolumny DataFrame → `CamelCase`
+- Pliki/foldery → `snake_case`
+- Zmienne → `snake_case`
+- Funkcje → `snake_case`
+
+#### Pliki
+- Notebooki ETL: `select_cols.ipynb`, `calendar.ipynb`
+- Notebooki testy: `testy_<nazwa>.ipynb`
+- Notebooki EDA: `eda_<temat>.ipynb`
+- Skrypty pipeline: `<nazwa>.py`
+- Pliki parquet: `<nazwa>.parquet`
+
+### Sumy Kontrolne
+
+```python
+from utils.tools import hash_danych_bezpieczny
+hash = hash_danych_bezpieczny("dane/interim/nazwa.parquet")          # domyślnie sortuje po TowId, Data
+
+# fact_inka_final (po zmianie TowId → SKU):
+hash = hash_danych_bezpieczny("dane/interim/fact_inka_final.parquet",
+                              kolumny_sortowania=['SKU', 'Data', 'DokId', 'Kolejnosc'])
+```
+
+Hash zależy od wersji bibliotek — porównujemy wyniki tylko przy wspólnym środowisku (niżej).
+
+### Środowisko
+
+Wspólne wersje (konieczne do zgodnych hashy):
+
+| Pakiet | Wersja |
+|---|---|
+| Python | 3.11 |
+| pandas | 3.0.3 |
+| numpy | 1.26.4 |
+| pyarrow | 14.0.2 |
+
+```
+conda create -n inka python=3.11 -y
+conda activate inka
+pip install "pandas==3.0.3" "numpy==1.26.4" "pyarrow==14.0.2" "matplotlib==3.10.9" "scipy==1.17.1" jupyter ipykernel
+python -m ipykernel install --user --name inka --display-name "inka (Python 3.11, pandas 3)"
+```
+
+W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
+`import sys, pandas, numpy, pyarrow; print(sys.executable, pandas.__version__, numpy.__version__, pyarrow.__version__)`
+
+</details>
+
+<details>
+<summary><h2>ETL — pipeline</h2></summary>
 
 ### Pipeline ETL
 
@@ -81,64 +142,10 @@ analiza_sprzedazy_w_sklepie/
 └── 📦 fact_inka_final.parquet
 ```
 
-### Konwencje Nazw
-
-#### Kod
-- Kolumny DataFrame → `CamelCase`
-- Pliki/foldery → `snake_case`
-- Zmienne → `snake_case`
-- Funkcje → `snake_case`
-
-#### Pliki
-- Notebooki ETL: `select_cols.ipynb`, `calendar.ipynb`
-- Notebooki testy: `testy_<nazwa>.ipynb`
-- Notebooki EDA: `eda_<temat>.ipynb`
-- Skrypty pipeline: `<nazwa>.py`
-- Pliki parquet: `<nazwa>.parquet`
-
-### Sumy Kontrolne
-
-```python
-from utils.tools import hash_danych_bezpieczny
-hash = hash_danych_bezpieczny("dane/interim/nazwa.parquet")          # domyślnie sortuje po TowId, Data
-
-# fact_inka_final (po zmianie TowId → SKU):
-hash = hash_danych_bezpieczny("dane/interim/fact_inka_final.parquet",
-                              kolumny_sortowania=['SKU', 'Data', 'DokId', 'Kolejnosc'])
-```
-
-Hash zależy od wersji bibliotek — porównujemy wyniki tylko przy wspólnym środowisku (niżej).
-
-### Środowisko
-
-Wspólne wersje (konieczne do zgodnych hashy):
-
-| Pakiet | Wersja |
-|---|---|
-| Python | 3.11 |
-| pandas | 3.0.3 |
-| numpy | 1.26.4 |
-| pyarrow | 14.0.2 |
-
-```
-conda create -n inka python=3.11 -y
-conda activate inka
-pip install "pandas==3.0.3" "numpy==1.26.4" "pyarrow==14.0.2" "matplotlib==3.10.9" "scipy==1.17.1" jupyter ipykernel
-python -m ipykernel install --user --name inka --display-name "inka (Python 3.11, pandas 3)"
-```
-
-W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
-`import sys, pandas, numpy, pyarrow; print(sys.executable, pandas.__version__, numpy.__version__, pyarrow.__version__)`
-
-### Autorzy
-
-- Mirosław Butajło ([@mixer123](https://github.com/mixer123))
-- Hubert Drozda ([@Hiu1975](https://github.com/Hiu1975))
-
 </details>
 
-<details open>
-<summary><h2>EDA — plan ze spotkania 12.10</h2></summary>
+<details>
+<summary><h2>Plan prac</h2></summary>
 
 ### 1. Stany magazynowe + hurtownia danych
 
