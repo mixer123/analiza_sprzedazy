@@ -54,7 +54,7 @@ analiza_sprzedazy_w_sklepie/
 from utils.tools import hash_danych_bezpieczny
 hash = hash_danych_bezpieczny("dane/interim/nazwa.parquet")          # domyślnie sortuje po TowId, Data
 
-# fact_inka_final (po zmianie TowId → SKU):
+# fact_inka_final i fact_inka_final_stany (po zmianie TowId → SKU):
 hash = hash_danych_bezpieczny("dane/interim/fact_inka_final.parquet",
                               kolumny_sortowania=['SKU', 'Data', 'DokId', 'Kolejnosc'])
 ```
@@ -135,11 +135,18 @@ W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
 └── 📦 fact_inka_calendar.parquet
         │
         ▼
-⚙️ notebooks/etl/transform.ipynb  ← transformacje, flagi towarowe i kalendarzowe (CzyPromocja — w przygotowaniu)
+⚙️ notebooks/etl/transform.ipynb  ← transformacje, flagi towarowe i kalendarzowe, CzyPromocja
         │
         ▼
 📁 dane/interim/
 └── 📦 fact_inka_final.parquet
+        │
+        ▼
+⚙️ notebooks/etl/stany.ipynb  ← stany magazynowe (StanPoRuchu, StanKoniecDnia)
+        │
+        ▼
+📁 dane/interim/
+└── 📦 fact_inka_final_stany.parquet
 ```
 
 </details>
@@ -147,41 +154,22 @@ W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
 <details>
 <summary><h2>Plan prac</h2></summary>
 
-### 1. Stany magazynowe + hurtownia danych
+### 1. Stany magazynowe ✅
 
-**Odpowiedzialny:** Hubert  **Szacunek:** 3–5 dni
+Osobny krok ETL `notebooks/etl/stany.ipynb` → `fact_inka_final_stany.parquet`
+(`StanPoRuchu`, `StanKoniecDnia`). Zgodność ze stanem systemowym przy REM: 95,1%.
+Metoda, wyniki, ujemne stany i ograniczenia: `docs/stany_hiu.md`.
 
-#### Metoda liczenia stanów (propozycja)
-- **REM i BO resetują stan** do policzonej ilości (`IloscPlus`) — spis z natury zastępuje stan; pozycje tego samego towaru w jednym remanencie **sumujemy**
-- pozostałe ruchy według `MetodaLiczenia` (`IP`, `IP_IM_DELTA`) — jak `RuchMagazynowy`
-- **kolejność ruchów:** `Data` → `KolejnyWDniu` (nie `DokId`)
-- **filtry:** `AktywnyDok = 1`, `WplywNaStan = 1`, bez wierszy zerowych (`DokId = -1`), bez pustych REM/BO (`IP = 0` i `IM = 0`)
-- **kontrola jakości:** stan wyliczony tuż przed REM vs `IloscMinus` (stan systemowy przed spisem), dla każdego dokumentu REM osobno
-- baza: notebook Huberta (ma już reset, sumowanie, `KolejnyWDniu`) + struktura funkcji z wersji Butka
-
-#### Stany w `fact_inka_final` (MVP)
-Stany liczymy **raz w ETL** — EDA, algorytmy i Streamlit czytają gotowy wynik, bez przeliczania historii ruchów. Na MVP jako dwie kolumny w `fact_inka_final`:
-- **`StanPoRuchu`** — stan po każdym ruchu (wierszu), narastająco w kolejności `Data` → `KolejnyWDniu` → `Kolejnosc`; szczegółowo, do analiz i weryfikacji
-- **`StanKoniecDnia`** — stan na koniec dnia, powtórzony we wszystkich wierszach SKU × dzień (= ostatni `StanPoRuchu` dnia); w analizach **nie sumować**, brać `first()` / `max()`
-
-#### Hurtownia danych (po MVP)
-Model gwiazdy (Kimball): tabele faktów (`fact_inka_final`, `fact_stany` — SKU × dzień) + wymiary (`dim_towar`, `dim_kalendarz`). Na MVP zostaje jeden plik `fact_inka_final` (CSOT).
-
-#### Zadania
-| Zadanie | Czas |
-|---|---|
-| porządki w notebooku (funkcje, stare komórki) | 0,5–1 dnia |
-| stany: `StanPoRuchu` + `StanKoniecDnia` w `fact_inka_final` | 1 dzień |
-| testy, weryfikacja, analiza wyników | 1–2 dni |
-| poprawki, PR, review | 0,5–1 dnia |
-
-**Do ustalenia:** miejsce w pipeline (osobny notebook `notebooks/etl/stany.ipynb` czy część `transform`); wejście — `fact_inka_final` po merge `transform`.
+**Po MVP:** pieczywo (świeże: stan na koniec dnia = 0), towary ważone (zgodność 61%),
+flaga „stan niewiarygodny” dla grup, hurtownia danych — model gwiazdy (Kimball):
+tabele faktów (`fact_inka_final`, `fact_stany` — SKU × dzień) + wymiary
+(`dim_towar`, `dim_kalendarz`).
 
 ---
 
 ### 2. EDA
 
-**Szacunek:** 8–12 dni  **Uwaga:** punkty 1, 2 i 4 nie wymagają stanów — można zacząć równolegle; punkty 3 i 5 dopiero po stanach.
+**Szacunek:** 8–12 dni  **Uwaga:** punkty 1, 2 i 4 nie wymagają stanów — można zacząć równolegle; punkty 3 i 5 korzystają ze stanów (`fact_inka_final_stany`).
 
 | # | Analiza | Co zrobić | Po co | Czas | Wymaga stanów |
 |---|---|---|---|---|---|
