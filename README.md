@@ -157,10 +157,10 @@ W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
 ### 1. Stany magazynowe ✅
 
 Osobny krok ETL `notebooks/etl/stany.ipynb` → `fact_inka_final_stany.parquet`
-(`StanPoRuchu`, `StanKoniecDnia`). Zgodność ze stanem systemowym przy REM: 95,1%.
+(`StanPoRuchu`, `StanKoniecDnia`). Zgodność ze stanem systemowym przy REM: 96,2%.
 Metoda, wyniki, ujemne stany i ograniczenia: `docs/stany_hiu.md`.
 
-**Po MVP:** pieczywo (świeże: stan na koniec dnia = 0), towary ważone (zgodność 61%),
+**Po MVP:** pieczywo (świeże: stan na koniec dnia = 0), towary ważone (zgodność 66%),
 flaga „stan niewiarygodny” dla grup, hurtownia danych — model gwiazdy (Kimball):
 tabele faktów (`fact_inka_final`, `fact_stany` — SKU × dzień) + wymiary
 (`dim_towar`, `dim_kalendarz`).
