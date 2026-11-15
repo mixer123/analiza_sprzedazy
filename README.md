@@ -142,7 +142,7 @@ W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
 └── 📦 fact_inka_final.parquet
         │
         ▼
-⚙️ notebooks/etl/stany.ipynb  ← stany magazynowe (StanPoRuchu, StanKoniecDnia)
+⚙️ notebooks/etl/stany.ipynb  ← stany magazynowe (StanPoRuchu, StanKoniecDnia, StanPoczatekDnia, KorektaRemanentu, DniOdResetu)
         │
         ▼
 📁 dane/interim/
@@ -157,7 +157,7 @@ W notebookach wybieramy kernel `inka`. Sprawdzenie w notebooku:
 ### 1. Stany magazynowe ✅
 
 Osobny krok ETL `notebooks/etl/stany.ipynb` → `fact_inka_final_stany.parquet`
-(`StanPoRuchu`, `StanKoniecDnia`). Zgodność ze stanem systemowym przy REM: 96,2%.
+(`StanPoRuchu`, `StanKoniecDnia`, `StanPoczatekDnia`, `KorektaRemanentu`, `DniOdResetu`). Zgodność ze stanem systemowym przy REM: 96,2%.
 Metoda, wyniki, ujemne stany i ograniczenia: `docs/stany_hiu.md`.
 
 **Po MVP:** pieczywo (świeże: stan na koniec dnia = 0), towary ważone (zgodność 66%),

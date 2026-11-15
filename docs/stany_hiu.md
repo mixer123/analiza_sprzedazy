@@ -1,6 +1,6 @@
 # stany.ipynb — stany magazynowe
 
-Krok ETL po `transform.ipynb`. Wejście `dane/interim/fact_inka_final.parquet`, wyjście `dane/interim/fact_inka_final_stany.parquet` (te same wiersze + 2 kolumny).
+Krok ETL po `transform.ipynb`. Wejście `dane/interim/fact_inka_final.parquet`, wyjście `dane/interim/fact_inka_final_stany.parquet` (te same wiersze + 5 kolumn).
 
 ## Kolumny wynikowe
 
@@ -8,6 +8,11 @@ Krok ETL po `transform.ipynb`. Wejście `dane/interim/fact_inka_final.parquet`, 
 |---|---|---|
 | `StanPoRuchu` | float64 | stan towaru po danym wierszu |
 | `StanKoniecDnia` | float64 | stan na koniec dnia, powtórzony we wszystkich wierszach SKU × dzień — **nie sumować**, brać `first()` / `max()` |
+| `StanPoczatekDnia` | float64 | stan przed pierwszym ruchem dnia (= `StanKoniecDnia` poprzedniego dnia; pierwszy dzień 0); bez sprzedaży z danego dnia, więc bez wycieku jako cecha do prognozy |
+| `KorektaRemanentu` | float64 | o ile REM/BO zmienił stan wyliczony z ruchów; ≠ 0 tylko w dniu resetu (ujemna = braki, dodatnia = nadwyżki) |
+| `DniOdResetu` | Int16 | dni od ostatniego REM/BO towaru; puste przed pierwszym resetem; im więcej, tym mniej wiarygodny stan |
+
+Kolumny dnia (`StanKoniecDnia`, `StanPoczatekDnia`, `KorektaRemanentu`, `DniOdResetu`) są powtórzone we wszystkich wierszach SKU × dzień — **nie sumować**. Zawsze: `StanPoczatekDnia` + ruchy dnia + `KorektaRemanentu` = `StanKoniecDnia`. Pomysł kolumn i układ dzienny — wersja stanów Butka.
 
 ## Metoda
 
